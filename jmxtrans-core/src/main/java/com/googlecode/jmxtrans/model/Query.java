@@ -45,6 +45,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
+import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -190,7 +191,18 @@ public class Query {
 			if (!attributes.isEmpty()) {
 				logger.debug("Executing queryName [{}] from query [{}]", queryName.getCanonicalName(), this);
 
-				AttributeList al = mbeanServer.getAttributes(queryName, attributes.toArray(new String[attributes.size()]));
+				AttributeList al = new AttributeList();
+				for(String attrToGet : attributes) {
+					try {
+						Object value =  mbeanServer.getAttribute(queryName, attrToGet);
+						Attribute result = new Attribute(attrToGet, value);
+						al.add(result);
+					} catch (AttributeNotFoundException e) {
+						logger.error(e.getMessage(), e);
+					} catch (MBeanException e) {
+						logger.error(e.getMessage(), e);
+					}
+				}
 
 				return new JmxResultProcessor(this, oi, al.asList(), info.getClassName(), queryName.getDomain()).getResults();
 			}
